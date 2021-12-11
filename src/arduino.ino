@@ -25,11 +25,21 @@ along with xmas_lights.  If not, see <https://www.gnu.org/licenses/
 
 // includes
 #include "Arduino.h"
+#include "FastLED.h"
+
+// LED Strip
+#define NUM_LEDS 50
+#define ledStrip1Pin 7
+#define ledType WS2811
+#define ledBrightness 200
+#define ledSaturation 255
+
+
 
 // constants
-const int led1Pin = 8;
-const int led2Pin = 9;
-const int interruptPin = 2;
+#define led1Pin 8
+#define led2Pin 9
+#define interruptPin 2
 
 //globals
 bool StateLed = false;              // state tracking for LED flip flop
@@ -40,6 +50,11 @@ volatile unsigned long last_interrupt_time = 0; // interrupt debounce
 
 String inputString = "";            // string to hold incoming data
 
+int indexLED = 0;
+CRGB color = CRGB::Green;
+
+CRGB leds[NUM_LEDS];
+
 /*
 Setup and initialization routine
 */
@@ -48,6 +63,8 @@ void setup() {
   pinMode(led1Pin, OUTPUT);
   pinMode(led2Pin, OUTPUT);
   pinMode(interruptPin, INPUT_PULLUP);
+
+  FastLED.addLeds<ledType, ledStrip1Pin>(leds, NUM_LEDS);
 
   attachInterrupt(digitalPinToInterrupt(interruptPin), isr, CHANGE);
 
@@ -74,7 +91,44 @@ void loop() {
 
   // LED flip flop
   //ledFlipFlop();
+  //ledStripTest();
+  ledStripRainbow();
+}
 
+/*
+LED Strip Control Test
+*/
+void ledStripTest() {
+  
+  leds[indexLED] = color;
+  FastLED.show();
+  delay(1000);
+  indexLED++;
+
+  if(indexLED == NUM_LEDS) {
+    indexLED = 0;
+    CRGB c1 = CRGB::Green;
+    CRGB c2 = CRGB::Black;
+
+    if(color == c1) {
+      color = c2;
+    } else {
+      color = c1;
+    }
+  }
+}
+
+/*
+Rainbow Test
+*/
+void ledStripRainbow() {
+  for (int j = 0; j < 255; j++) {
+    for (int i = 0; i < NUM_LEDS; i++) {
+      leds[i] = CHSV(i - (j * 2), ledSaturation, ledBrightness); /* The higher the value 4 the less fade there is and vice versa */ 
+    }
+    FastLED.show();
+    delay(25); /* Change this to your hearts desire, the lower the value the faster your colors move (and vice versa) */
+  }
 }
 
 /*
@@ -127,6 +181,9 @@ void ModeDisable() {
   ModeEnabled = false;
   Serial.println("Disabling mode.");
   digitalWrite(led1Pin, LOW);
+
+  FastLED.clear();  // clear all pixel data
+  FastLED.show();
 }
 
 /*
